@@ -3,6 +3,10 @@
 # Changes
 ```
 2023-11-01 eh2k:
+    * Compile C++ code without errors (-fno-exceptions) + hello-world test
+    * removed -fno-section-anchors
+    * support --build_flags args (e.g. --build_flags=-I.)
+2023-11-01 eh2k:
     * python3 migration (based on https://github.com/bogdanm/udynlink/pull/7) 
     * cycle.yml to gh_actions migration 
     * updating to latest qemu-system-gnuarmeclipse
