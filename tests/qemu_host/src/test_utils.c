@@ -42,6 +42,9 @@ int check_extern_symbols(const udynlink_module_t *p_mod, const char *slist[]) {
 int run_test_func(const udynlink_module_t *p_mod) {
     udynlink_sym_t sym;
 
+    uint32_t* mod_base = 0x20000000; //see asm_template.tmpl
+    *mod_base = p_mod->ram_base;
+
     // Run test
     if (udynlink_lookup_symbol(p_mod, "test", &sym) == NULL) {
         printf("'test' symbol not found.\n");

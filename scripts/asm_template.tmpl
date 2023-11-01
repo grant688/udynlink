@@ -13,16 +13,15 @@
     .type {{actname}}, %function
 {{s}}:
     push    {r9, lr}
-    push    {r0, r1}
-    mov     r1, #0x1c
-    ldr     r1, [r1]
-    mov     r0, pc
-    blx     r1
-    mov     r9, r0
-    pop     {r0, r1}
+    push    {r1}
+    ldr     r1, .L1{{s}}
+    ldr     r9, [r1]
+    pop     {r1}
     bl      {{actname}}
     pop     {r9, pc}
 
+.L1{{s}}:
+    .word   0x20000000
     .size   {{s}}, . - {{s}}
 {% endfor %}
 

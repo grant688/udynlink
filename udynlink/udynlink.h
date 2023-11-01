@@ -142,10 +142,6 @@ uint32_t udynlink_get_ram_size(const udynlink_module_t *p_mod);
 // Returns the name of the given module.
 const char *udynlink_get_module_name(const udynlink_module_t *p_mod);
 
-// Lookup the given module by name.
-// Returns NULL if the module is not found.
-udynlink_module_t *udynlink_lookup_module(const char *name);
-
 // Lookup the given symbol. Writes the result in p_sym.
 // p_module - pointer to the module to search, or NULL to search in all modules.
 // name - name of the symbol
@@ -159,9 +155,6 @@ uint32_t udynlink_get_symbol_value(const udynlink_module_t *p_mod, const char *n
 // Sets the debug level.
 // level - the debug level (see udynlink_debug_level_t above)
 void udynlink_set_debug_level(udynlink_debug_level_t level);
-
-// Return the LOT address for the function at the given address
-uint32_t udynlink_get_lot_base(uint32_t pc);
 
 #ifdef __cplusplus
 }

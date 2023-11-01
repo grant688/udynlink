@@ -9,14 +9,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Local macros and data
 
-#ifndef UDYNLINK_MAX_HANDLES
-#warning Setting UDYNLINK_MAX_HANDLES to 1 by default
-#define UDYNLINK_MAX_HANDLES                  1
-#endif
-
 #define UDYNLINK_MODULE_SIGN                  (((uint32_t)'M' << 24) | ((uint32_t)'L' << 16) | ((uint32_t)'D' << 8) | (uint32_t)'U')
 
-static udynlink_module_t module_table[UDYNLINK_MAX_HANDLES];
 static udynlink_debug_level_t debug_level;
 
 #define _UDYNLINK_EXPAND(x)                   #x"\n"
@@ -125,16 +119,6 @@ static const uint32_t *get_relocs_pointer(const udynlink_module_t *p_mod) {
 ////////////////////////////////////////////////////////////////////////////////
 // Helpers - various
 
-// Find the next free entry in the module table, return a pointer to it o NULL
-static udynlink_module_t *get_next_free_module(void) {
-    for (uint32_t i = 0; i < UDYNLINK_MAX_HANDLES; i ++) {
-        if (module_table[i].p_header == NULL) {
-            return module_table + i;
-        }
-    }
-    return NULL;
-}
-
 // Marks the given module as "free" by zeroing its data structure
 static void mark_module_free(udynlink_module_t *p_mod) {
     memset(p_mod, 0, sizeof(udynlink_module_t));
@@ -197,17 +181,11 @@ static udynlink_sym_t *offset_sym(const udynlink_module_t *p_mod, udynlink_sym_t
 // Public interface
 
 udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, uint32_t load_size, udynlink_load_mode_t load_mode, udynlink_error_t *p_error) {
-    udynlink_module_t *p_mod = NULL;
+    udynlink_module_t *p_mod = udynlink_external_malloc(sizeof(udynlink_module_t));
     void *ram_addr = NULL;
     udynlink_error_t res = UDYNLINK_OK;
     const udynlink_module_header_t *p_header = (const udynlink_module_header_t*)base_addr;
     udynlink_sym_t sym;
-
-    // Find an empty space in the module table
-    if((p_mod = get_next_free_module()) == NULL) {
-        res = UDYNLINK_ERR_LOAD_NO_MORE_HANDLES;
-        goto exit;
-    }
 
     // Setup the module structure. Depending on the copy mode, we might need to rewrite it later.
     p_mod->p_header = p_header;
@@ -217,15 +195,6 @@ udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, 
     if (p_header->sign != UDYNLINK_MODULE_SIGN) {
         res = UDYNLINK_ERR_LOAD_INVALID_SIGN;
         goto exit;
-    }
-
-    // Check if a module with a duplicated name already exists
-    for (uint32_t i = 0; i < UDYNLINK_MAX_HANDLES; i ++) {
-        // Check for other module (not p_mod) that are in use and have the same name as the module being loaded (in p_mod)
-        if ((module_table + i != p_mod) && (module_table[i].p_header != NULL) && (!strcmp(udynlink_get_module_name(module_table + i), udynlink_get_module_name(p_mod)))) {
-            res = UDYNLINK_ERR_LOAD_DUPLICATE_NAME;
-            goto exit;
-        }
     }
 
     UDYNLINK_DEBUG(UDYNLINK_DEBUG_INFO, "Processing module at %p named '%s' with load mode %d\n", base_addr, udynlink_get_module_name(p_mod), (int)load_mode);
@@ -350,6 +319,7 @@ udynlink_error_t udynlink_unload_module(udynlink_module_t *p_mod) {
         UDYNLINK_DEBUG(UDYNLINK_DEBUG_INFO, "Deallocated memory area at %p\n", p_mod->p_ram);
     }
     mark_module_free(p_mod);
+    udynlink_external_free(p_mod);
     return UDYNLINK_OK;
 }
 
@@ -382,27 +352,14 @@ const char *udynlink_get_module_name(const udynlink_module_t *p_mod) {
     }
 }
 
-udynlink_module_t *udynlink_lookup_module(const char *name) {
-    for (uint32_t i = 0; i < UDYNLINK_MAX_HANDLES; i ++) {
-        if (module_table[i].p_header != NULL) { // there's a module here
-            if(!strcmp(name, udynlink_get_module_name(module_table + i))) {
-                return module_table + i;
-            }
-        }
-    }
-    return NULL;
-}
-
 udynlink_sym_t *udynlink_lookup_symbol(const udynlink_module_t *p_mod, const char *name, udynlink_sym_t *p_sym) {
     uint32_t idx;
 
-    for (uint32_t i = 0; i < UDYNLINK_MAX_HANDLES; i ++) { // iterate through all modules
-        if ((p_mod == NULL) || (p_mod == module_table + i)) { // but consider only the given one if not NULL
-            idx = 0;
-            while (get_sym_at(module_table + i, idx ++, p_sym) != NULL) { // iterate through module's symbol table
-                if (!strcmp(p_sym->name, name)) { // symbol found
-                    return offset_sym(module_table + i, p_sym); // offset value properly before returning
-                }
+    if (p_mod != NULL) { // but consider only the given one if not NULL
+        idx = 0;
+        while (get_sym_at(p_mod, idx ++, p_sym) != NULL) { // iterate through module's symbol table
+            if (!strcmp(p_sym->name, name)) { // symbol found
+                return offset_sym(p_mod, p_sym); // offset value properly before returning
             }
         }
     }
@@ -422,23 +379,4 @@ void udynlink_set_debug_level(udynlink_debug_level_t level) {
     debug_level = level;
 }
 
-uint32_t udynlink_get_lot_base(uint32_t pc) {
-    udynlink_module_t *p_mod = module_table;
-    uint32_t code_base;
-
-    // Iterate through all loaded modules
-    for (uint32_t i = 0; i < UDYNLINK_MAX_HANDLES; i ++, p_mod ++) {
-        // Consider only loaded modules
-        if (p_mod->p_header != NULL) {
-            // Check PC limits
-            code_base = (uint32_t)get_code_pointer(p_mod);
-            if ((code_base <= pc) && (pc < code_base + p_mod->p_header->code_size)) {
-                return p_mod->ram_base;
-            }
-        }
-    }
-    // Nothing found, so return 0
-    // TODO: proper error handling here
-    return 0;
-}
 

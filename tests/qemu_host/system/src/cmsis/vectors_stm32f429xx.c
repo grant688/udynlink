@@ -213,8 +213,6 @@ typedef void
 // and relies on the linker script to place it at the correct location
 // in memory.
 
-extern uint32_t udynlink_get_lot_base(uint32_t);
-
 __attribute__ ((section(".isr_vector"),used))
 pHandler __isr_vectors[] =
   {
@@ -234,7 +232,7 @@ pHandler __isr_vectors[] =
     0,                                 // Reserved
     0,                                 // Reserved
 #endif
-    (pHandler)&udynlink_get_lot_base,    // Reserved
+    0,                                 // Reserved
     0,                                 // Reserved
     0,                                 // Reserved
     0,                                 // Reserved
