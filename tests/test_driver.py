@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import subprocess32 as subprocess
@@ -23,34 +23,34 @@ def keep_current_dir(func):
 # Run a command, capturing output
 # Return the output and the exit code
 def run_cmd(cmd, show_output=False, timeout=None):
-    print "Executing '%s' " % cmd
+    print("Executing '%s' " % cmd)
     child = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE)
     try:
         out, _ = child.communicate(timeout = timeout)
     except subprocess.TimeoutExpired:
-        print "-" * 80 + "\nTimeout running '%s'" % cmd
+        print("-" * 80 + "\nTimeout running '%s'" % cmd)
         child.terminate()
         return (False, None)
     if child.returncode != 0:
-        print "-" * 80 + "\nError running '%s'" % cmd
-        print out
+        print("-" * 80 + "\nError running '%s'" % cmd)
+        print(out)
         return (False, out)
     if show_output:
-        print out
+        print(out)
     return (True, out)
 
 # Run a single test
 @keep_current_dir
 def test_one(full_path, opt):
     sys.path.append(full_path)
-    if sys.modules.has_key("test_data"):
+    if "test_data" in sys.modules:
         del sys.modules["test_data"]
     from test_data import test_data
     sys.path.remove(full_path)
-    print "--- Running test '%s' in '%s' with opt %s ---" % (test_data["desc"], os.path.basename(full_path), "-Os" if opt else "-O0")
+    print("--- Running test '%s' in '%s' with opt %s ---" % (test_data["desc"], os.path.basename(full_path), "-Os" if opt else "-O0"))
     os.chdir(full_path)
     # Compile first
-    if not test_data.has_key("modules"):
+    if not "modules" in test_data:
         return False, "No modules!"
     for m in test_data["modules"]:
         srcs = " ".join(m)
@@ -69,8 +69,9 @@ def test_one(full_path, opt):
     if not run_cmd("make test1.elf")[0]:
         return False, "Unable to build test"
     # Run QEMU with the freshly compiled test
-    print "--- Running QEMU ---"
+    print("--- Running QEMU ---")
     res, out = run_cmd("qemu-system-gnuarmeclipse -board STM32F429I-Discovery -image test1.elf -nographic", timeout=default_qemu_timeout)
+    out = out.decode() 
     if not res:
         return False, "**** Unable to run QEMU or timeout running ****"
     # Check result
@@ -91,17 +92,17 @@ for l in tests:
             res, out = test_one(os.path.abspath(l), opt)
             total += 1
             if not res:
-                print "--- TEST FAILED! ---"
-                print out + "\n"
+                print("--- TEST FAILED! ---")
+                print(out + "\n")
                 failed += 1
             else:
-                print "--- TEST OK ---\n"
+                print("--- TEST OK ---\n")
 
-print '*' * 20
-print "Total:  %d" % total
-print "Passed: %d" % (total - failed)
-print "Failed: %d" % failed
-print '*' * 20
+print('*' * 20)
+print("Total:  %d" % total)
+print("Passed: %d" % (total - failed))
+print("Failed: %d" % failed)
+print('*' * 20)
 
 os._exit(failed)
 

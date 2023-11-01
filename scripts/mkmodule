@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import os, sys
 from udynlink_utils import *
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
@@ -35,8 +34,8 @@ def make_symbols_local(obj, symlist, args):
 
 def assemble(src_name, args):
     path, fname, ext = split_fname(src_name)
-    objname = fname + ".o"
-    asm_data = {"input": src_name, "output": os.path.join(path, objname)}
+    objname = os.path.join(path, fname + ".o")
+    asm_data = {"input": src_name, "output": objname}
     debug("Assembling '%s'" % src_name, args)
     execute("arm-none-eabi-gcc " + asm_cmd.format(**asm_data), args)
     return objname
@@ -187,7 +186,7 @@ def process(output, args):
     # There's a single mapping for any symbol, even if there are multiple relocations for the symbol
     reloc_name_to_idx = {}
     for e in rlist:
-        if not reloc_name_to_idx.has_key(e["name"]):
+        if not (e["name"] in reloc_name_to_idx):
             reloc_name_to_idx[e["name"]] = lot_entries
             lot_entries += 1
             total_relocs += 1
@@ -203,11 +202,13 @@ def process(output, args):
                 ignored[s] = True
             continue
         if t == "R_ARM_ABS32":
-            offset = (offset - len(code_sect)) / 4
+            check(offset % 4 == 0, "%s offset mod 4 '%x' is not a multiple of 4" % (s, offset))
+            check((offset - len(code_sect)) % 4 == 0, "%s code_sect mod 4 '%x-%x' is not a multiple of 4" % (s, offset, len(code_sect)))
+            offset = int((offset - len(code_sect)) / 4)
             check(offset >= 0, "Offset of R_ARM_ABS32 symbols '%s' should be positive or 0!" % s)
             data_relocs.append((s, delta_off + offset, value))
             debug("Found data relocation for symbol '%s' (offset is %X, value is %x)" % (s, delta_off + offset, value), args)
-            if not reloc_name_to_idx.has_key(s):
+            if not s in reloc_name_to_idx:
                 reloc_name_to_idx[s] = delta_off + offset
                 total_relocs += 1
     print_list([l["name"] for l in rlist], "Final LOT relocation list:", args)
@@ -249,9 +250,9 @@ def process(output, args):
 
     set_debug_col('magenta')
     debug("%s Building image %s" % ('-' * 10, '-' * 10), args)
-    img = bytearray("UDLM") # Signature (4b)
+    img = bytearray("UDLM".encode('ascii'))  # Signature (4b)
     # The first entry in the symbol table is always the module name
-    slist = [args.name] + [s for s in sym_map if reloc_name_to_idx.has_key(s) or sym_map[s] == "external" or sym_map[s] == "exported"]
+    slist = [args.name] + [s for s in sym_map if (s in reloc_name_to_idx) or sym_map[s] == "external" or sym_map[s] == "exported"]
     img += struct.pack("<H", lot_entries) # LOT size (4b)
     img += struct.pack("<H", total_relocs) # Total number of relocations (4b)
     # Compute len of symbol table in advance (also name to symbol table index mapping (symt_mapping))
@@ -312,16 +313,16 @@ def process(output, args):
     # Pass 2: write actual symbols
     for i, s in enumerate(slist):
         if i == 0 or sym_map[s] != "local":
-            img += s + '\0'
+            img += (s + '\0').encode('utf-8')
     # Round to a multiple of 4
     if len(img) % 4 > 0:
-        img += '\0' * (4 - len(img) % 4)
+        img += ('\0' * (4 - len(img) % 4)).encode('utf-8')
     # And finally append the code
     img = img + code_sect + data_sect
     bin_name = args.name + ".bin"
     with open(bin_name, "wb") as f:
         f.write(img)
-    print "Image written to '%s'." % bin_name
+    print("Image written to '%s'." % bin_name)
     set_debug_col()
     return bin_name
 
@@ -340,7 +341,7 @@ def gen_c_header(bin_name, header_path, args):
         f.write("static const unsigned char %s_module_data[] = {\n    " % fname)
         cnt = 0
         for idx, c in enumerate(bin_data):
-            f.write("0x%02X" % ord(c))
+            f.write("0x%02X" % c)
             if idx < len(bin_data) - 1:
                 f.write(",")
                 cnt += 1

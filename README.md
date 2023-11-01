@@ -1,4 +1,12 @@
-![CircleCI](https://circleci.com/gh/bogdanm/udynlink.svg?style=shield&circle-token=8f507dac9e4c9d4e730416a21a8013eab6f9e952)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
+# Changes
+```
+2023-11-01 eh2k:
+    * python3 migration (based on https://github.com/bogdanm/udynlink/pull/7) 
+    * cycle.yml to gh_actions migration 
+    * updating to latest qemu-system-gnuarmeclipse
+```
 
 # Overview
 
