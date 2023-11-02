@@ -2,6 +2,10 @@
 
 # Changes
 ```
+[4] 2023-11-02 eh2k:
+    * O3 opt 
+    * (string table issue) R_ARM_ABS32 data relocation
+    * extra script/tests output
 [3] 2023-11-01 eh2k:
     * no module reusing (multiple instances of one module alowed)
     * replaced udynlink_get_lot_base by a "fixed location" 

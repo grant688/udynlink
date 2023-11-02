@@ -6,6 +6,11 @@ from elftools.elf.relocation import RelocationSection
 from elftools.elf.sections import SymbolTableSection
 from elftools.elf.relocation import RelocationSection
 from elftools.elf.descriptions import describe_reloc_type
+import json
+
+def to_json(obj):
+    #print(json.dumps(data, indent=4))
+    return json.dumps(json.loads(json.dumps(obj), parse_int=lambda i:hex(int(i))), indent=2)
 
 def colored(text, *args, **kargs):
     return text
@@ -82,7 +87,7 @@ def set_debug_col(col = None):
 def print_list(l, header, args, col = None):
     if l:
         col = col or debug_col
-        debug("%s %s" % (bold(header, col), bold(", ".join(l), col)), args, col)
+        debug("%s %s" % (bold(header, col), bold(to_json(l), col)), args, col)
 
 def round_to(n, sz):
     return (n + sz - 1) & ~(sz - 1);
@@ -132,6 +137,9 @@ def get_symbols_in_elf(obj):
 # TODO: also consider weak functions here?
 def get_public_functions_in_object(obj):
     return [s for s, d in get_symbols_in_elf(obj).items() if d["type"] == "STT_FUNC" and d["bind"] == "STB_GLOBAL"]
+
+def get_local_symbols_in_object(obj):
+    return [s for s, d in get_symbols_in_elf(obj).items() if d["bind"] == "STB_LOCAL" and s.startswith(".")]
 
 def get_relocations_in_elf(obj):
     rels = []

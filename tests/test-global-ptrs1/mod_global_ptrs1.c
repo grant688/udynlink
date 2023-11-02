@@ -22,6 +22,7 @@ int test(void) {
     int res1, res2;
 
     printf("Running test '%s'\n", "mod_global_ptrs1");
+    printf("p_arg=%d %d\n", *p_arg, g);
     p_f = p_f1;
     p_arg = &g;
     res1 = p_f(p_arg);

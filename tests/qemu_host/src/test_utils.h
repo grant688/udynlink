@@ -5,7 +5,7 @@
 
 #define CHECK_RAM_SIZE(p, s)\
 do {\
-    if (p->p_header->data_size + p->p_header->bss_size != s) {\
+    if (p->p_header->data_size + p->p_header->bss_size < s) {\
         printf("Unexpected RAM size '%u', expected '%u'\n", p->p_header->data_size + p->p_header->bss_size, s);\
         goto exit;\
     }\

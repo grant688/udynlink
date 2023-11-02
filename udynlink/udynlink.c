@@ -257,6 +257,16 @@ udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, 
     for (uint32_t i = 0; i < p_header->num_rels; i ++) {
         uint32_t lot_offset = *p_rels ++;
         uint32_t symt_offset = *p_rels ++;
+
+        if(symt_offset & (1 << 31)) {
+            // https://stackoverflow.com/questions/75558729/position-independent-code-gcc-versus-armcc
+            // R_ARM_ABS32 data relocation
+            // *offset += &data - value
+            uint32_t *p = p_data + (lot_offset - p_header->num_lot);
+            *p += (uint32_t)p_data - (symt_offset & 0x7FFFFFFF);
+            continue;
+        }
+
         if (get_sym_at(p_mod, symt_offset, &sym) == NULL) { // symbol table offset is out of range, shouldn't happen
             res = UDYNLINK_ERR_LOAD_BAD_RELOCATION_TABLE;
             goto exit;

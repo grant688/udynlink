@@ -47,6 +47,7 @@ def test_one(full_path, opt):
         del sys.modules["test_data"]
     from test_data import test_data
     sys.path.remove(full_path)
+    aopt = "Os" if opt else "O3"
     print("--- Running test '%s' in '%s' with opt %s ---" % (test_data["desc"], os.path.basename(full_path), "-Os" if opt else "-O0"))
     os.chdir(full_path)
     # Compile first
@@ -55,8 +56,18 @@ def test_one(full_path, opt):
     for m in test_data["modules"]:
         srcs = " ".join(m)
         cmd = compile_cmd % ("" if opt else "--no-opt ", srcs)
-        if not run_cmd(cmd)[0]:
+        res, out = run_cmd(cmd)
+        out = out.decode() 
+        if not res:
             return False, "Unable to compile module(s) " + srcs
+        with open(full_path + "/output_build_%s.txt" % aopt, 'w') as fout:
+            fout.write(out)
+        cmd = "arm-none-eabi-objdump -Dztr --source ./%s.elf" % os.path.splitext(srcs)[0]
+        res, out = run_cmd(cmd)
+        out = out.decode() 
+        with open(full_path + "/output_objdump_%s.txt" % aopt, 'w') as fout:
+            fout.write(out)
+ 
     # Copy qemu test in its directory
     shutil.copyfile("test_qemu.c", os.path.join("../qemu_host/src", "test_qemu.c"))
     # Build qemu test
@@ -74,6 +85,8 @@ def test_one(full_path, opt):
     out = out.decode() 
     if not res:
         return False, "**** Unable to run QEMU or timeout running ****"
+    with open(full_path + "/output_test_%s.txt" % aopt, 'w') as fout:
+        fout.write(out)
     # Check result
     if out.find("*** TEST OK ***") == -1:
         return False, "**** Can't find the test OK indicator in the output ****\n" + out

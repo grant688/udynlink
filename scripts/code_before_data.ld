@@ -15,8 +15,6 @@ SECTIONS
     . = ALIGN(4);
     *(.text)                 /* .text sections (code) */
     *(.text*)                /* .text* sections (code) */
-    *(.rodata)               /* .rodata sections (constants, strings, etc.) */
-    *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } > all
 
@@ -25,6 +23,8 @@ SECTIONS
     . = ALIGN(4);
     *(.data)                 /* .data sections */
     *(.data*)                /* .data* sections */
+    *(.rodata)               /* .rodata sections (constants, strings, etc.) */
+    *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } > all
 

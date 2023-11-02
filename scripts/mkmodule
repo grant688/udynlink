@@ -48,7 +48,7 @@ def compile(src_name, args, redefine_symbols = True, macros=[]):
     extra = "" if args.pc_rel else "-mno-pic-data-is-text-relative"
     if not args.no_long_calls:
         extra += " -mlong-calls"
-    extra += " -O0" if args.no_opt else " -Os"
+    extra += " -O3" if args.no_opt else " -Os"
     if src_name.endswith(".cpp") or src_name.endswith(".cxx"):
         extra += " -fno-use-cxa-atexit"
         extra += " -fno-exceptions"
@@ -133,6 +133,8 @@ def process(output, args):
     debug("%s Examining symbol table %s" % ('-' * 10, '-' * 10), args)
     syms = get_symbols_in_elf(output)
     rels = get_relocations_in_elf(output)
+    print_list(syms,"syms   :", args)
+    print_list(rels,"rels   :", args)
     sym_map = RejectingDict()
     for s, d in syms.items():
         if not s or s == "$t" or s == "$d":
@@ -155,7 +157,6 @@ def process(output, args):
     print_list([s for s in sym_map if sym_map[s] == "local"],"Locals   :", args)
 
     # Process relocations
-    lot_entries, total_relocs = 0, 0
     set_debug_col('yellow')
     debug("%s Examining relocations %s" % ('-' * 10, '-' * 10), args)
     local_relocs, foreign_relocs, rlist, ignored = [], [], [], {}
@@ -186,18 +187,18 @@ def process(output, args):
     # Establish a mapping between symbol names and their positions in LOT using rlist above
     # The mapping is arbitrary, but that's more than enough
     # There's a single mapping for any symbol, even if there are multiple relocations for the symbol
-    reloc_name_to_idx = {}
+    reloc_name_to_idx, lot_entries = {}, 0
     for e in rlist:
         if not (e["name"] in reloc_name_to_idx):
             reloc_name_to_idx[e["name"]] = lot_entries
             lot_entries += 1
-            total_relocs += 1
+
     # Data relocations deal with R_ARM_ABS32 relocs
     delta_off, data_relocs = lot_entries, []
     for r in rels:
         s, t = r["name"], r["type"]
         try:
-            offset, value = r["offset"], syms[s]["value"]
+            offset, value = r["offset"], r["value"] #syms[s]["value"]
         except KeyError:
             if not ignored.get(s, False):
                 warn("Ignoring unknown symbol '%s' in relocation list" % s)
@@ -212,7 +213,6 @@ def process(output, args):
             debug("Found data relocation for symbol '%s' (offset is %X, value is %x)" % (s, delta_off + offset, value), args)
             if not s in reloc_name_to_idx:
                 reloc_name_to_idx[s] = delta_off + offset
-                total_relocs += 1
     print_list([l["name"] for l in rlist], "Final LOT relocation list:", args)
     print_list([l[0] for l in data_relocs], "Final data relocation list:", args)
     debug("Symbol positions in LOT: " + str(reloc_name_to_idx), args)
@@ -256,7 +256,7 @@ def process(output, args):
     # The first entry in the symbol table is always the module name
     slist = [args.name] + [s for s in sym_map if (s in reloc_name_to_idx) or sym_map[s] == "external" or sym_map[s] == "exported"]
     img += struct.pack("<H", lot_entries) # LOT size (4b)
-    img += struct.pack("<H", total_relocs) # Total number of relocations (4b)
+
     # Compute len of symbol table in advance (also name to symbol table index mapping (symt_mapping))
     symt_len = len(slist) * 8 + 4 # 2 4-byte entry for each symbol: (offset to name, offset in image) + initial word which is the number of entries
     symt_mapping = {}
@@ -264,27 +264,49 @@ def process(output, args):
         if i == 0 or sym_map[s] != "local":
             symt_len += len(s) + 1
         symt_mapping[s] = i
-    symt_len = round_to(symt_len, 4)
-    debug("Size of symbol table is %d bytes" % symt_len, args)
-    img += struct.pack("<I", symt_len) # Size of symbol table in bytes (4b)
-    img += struct.pack("<I", len(code_sect)) # Size of code section (4b)
-    img += struct.pack("<I", len(data_sect)) # Size of data section (4b)
-    img += struct.pack("<I", len(bss_sect)) # Size of bss section (4b)
-    # Write relocations: (lot off, symy off) pairs
+    
     relocated = {}
-    for r in local_relocs + data_relocs + foreign_relocs:
-        sym, _, value = r
-        if relocated.get(sym, False):
+    realocs, total_relocs = bytearray(), 0
+    for r in  local_relocs + foreign_relocs + data_relocs:
+        sym, offset, value = r
+        if sym == ".text": 
             continue
-        img += struct.pack("<II", reloc_name_to_idx[sym], symt_mapping[sym])
+        elif sym == ".data": 
+            # R_ARM_ABS32 data relocation
+            # *offset += &data - value
+            data_offset = (offset - delta_off) * 4
+            value = (1 << 31) | value #flag -> not a symt index
+        else:
+            offset = reloc_name_to_idx[sym]
+            value = symt_mapping[sym]
+            if relocated.get(sym, False):
+                continue
+
+        debug("%02d: Relocation (%s) type: %s, \n\t\t\t\t\t { lot: 0x%08X, symt: 0x%08X }  written." % (
+            total_relocs, sym, 
+            "foreign" if r in foreign_relocs else "local", offset, value), args)
         relocated[sym] = True
-        debug("Wrote %s relocation (%08X, %08X)" % ("foreign" if r in foreign_relocs else "local", reloc_name_to_idx[sym], symt_mapping[sym]), args)
+        realocs += struct.pack("<II", offset, value)
+        total_relocs += 1
+    debug("== RelocationTable, entries: %d" % total_relocs, args)
+    img += struct.pack("<H", total_relocs)  # Total number of relocations (4b)
+    
+    symt_len = round_to(symt_len, 4)
+    img += struct.pack("<I", symt_len)  # Size of symbol table in bytes (4b)
+    img += struct.pack("<I", len(code_sect))  # Size of code section (4b)
+    img += struct.pack("<I", len(data_sect))  # Size of data section (4b)
+    img += struct.pack("<I", len(bss_sect))  # Size of bss section (4b)
+    # Write relocations: (lot off, symy off) pairs
+    img += realocs
+    
+    debug("== SymbolTable, entries: (%d), bytes %d" % (len(symt_mapping), symt_len), args)
     # Write actual symbol table
     off = len(slist) * 8 + 4
     # First word is the numer of entries
     img += struct.pack("<I", len(slist))
     for i, s in enumerate(slist):
-        if i > 0: # regular symbol (not the module name).
+        debug_hint = ""
+        if i > 0:  # regular symbol (not the module name).
             # The "offset" part of the symbol def has only 28 bits usable as offset
             # The most signifcant 4 bits encode data about the symbol itself:
             #     31: always 0, except for the last entry marker (which is 0xFFFFFFFF)
@@ -295,22 +317,24 @@ def process(output, args):
                 type_data = 0
             elif sym_map[s] == "exported":
                 type_data = 1
-            else: # external
+            else:  # external
                 type_data = 2
             type_data |= 4 if defined_in_code else 0
             val = syms[s]["value"]
             # Symbols that are not in the code section (and are defined in the module) will have their value offseted with the
             # start of the .data section in the image
             val_offset = 0 if (sym_map[s] == "external" or defined_in_code) else len(code_sect)
+            debug_hint = "type: %s, " % sym_map[s]
             if val_offset:
-                debug("    Symbol '%s' offset by -%08X bytes from value %08X" % (s, val_offset, val), args)
+                debug_hint += "Offset by -0x%08X bytes from value 0x%08X" % (val_offset, val)
             val = val - val_offset
             s_off = (off if sym_map[s] != "local" else 0) | (type_data << 28)
-        else: # module name
+        else:  # module name
             val, s_off = 0, (3 << 28) | off
         img += struct.pack("<II", s_off, val)
-        debug("Added symbol '%s' with value %08X and name offset %08X at index %d" % (s, val, s_off, i), args)
-        if i == 0 or sym_map[s] != "local": # local symbols don't have a name in the offset table
+        debug("%02d: Symbol '%s', %s\n\t\t\t\t\t { offset: 0x%08X, value 0x%08X }" % 
+              (i, s, debug_hint, s_off, val), args)
+        if i == 0 or sym_map[s] != "local":  # local symbols don't have a name in the offset table
             off = off + len(s) + 1
     # Pass 2: write actual symbols
     for i, s in enumerate(slist):
