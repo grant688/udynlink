@@ -8,25 +8,23 @@
 int test_qemu(void) {
     const char *exported_syms[] = {"test", "g", "f2", NULL};
     const char *extern_syms[] = {"printf", NULL};
-    udynlink_module_t *p_mod;
+    udynlink_module_t mod;
     int res = 0;
 
     for (int i = (int)_UDYNLINK_LOAD_MODE_FIRST; i <= (int)_UDYNLINK_LOAD_MODE_LAST; i ++) {
-        if ((p_mod = udynlink_load_module(mod_local_ptrs_module_data, NULL, 0, (udynlink_load_mode_t)i, NULL)) == NULL)
+        if (udynlink_load_module(&mod, mod_local_ptrs_module_data, NULL, 0, (udynlink_load_mode_t)i))
             return 0;
-        CHECK_RAM_SIZE(p_mod, sizeof(int));
-        if (!check_exported_symbols(p_mod, exported_syms))
+        CHECK_RAM_SIZE(&mod, sizeof(int));
+        if (!check_exported_symbols(&mod, exported_syms))
             goto exit;
-        if (!check_extern_symbols(p_mod, extern_syms))
+        if (!check_extern_symbols(&mod, extern_syms))
             goto exit;
-        if (!run_test_func(p_mod))
+        if (!run_test_func(&mod))
             goto exit;
-        udynlink_unload_module(p_mod);
+        udynlink_unload_module(&mod);
     }
     res = 1;
-    p_mod = NULL;
 exit:
-    if (p_mod)
-        udynlink_unload_module(p_mod);
+    udynlink_unload_module(&mod);
     return res;
 }

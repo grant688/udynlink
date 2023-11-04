@@ -130,10 +130,13 @@ typedef enum {
 // p_error - pointer to an int where the error result of the function will be written (can be NULL).
 // Returns a pointer to the module handle, or NULL for error.
 // p_error is filled with the error code.
-udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, uint32_t load_size, udynlink_load_mode_t load_mode, udynlink_error_t *p_error);
+udynlink_error_t udynlink_load_module(udynlink_module_t *p_mod, const void *base_addr, void *load_addr, uint32_t load_size, udynlink_load_mode_t load_mode);
 
 // Unloads the specified module. Returns the status of the unload operation.
 udynlink_error_t udynlink_unload_module(udynlink_module_t *p_mod);
+
+// Return error string from error enum.
+const char *udynlink_error_msg(udynlink_error_t* err);
 
 // Return the RAM space required by the module.
 // This contains the LOT relocations + .data + .bss (+.text if the module was loaded with udynlink_load_module_copy).

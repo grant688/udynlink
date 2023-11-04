@@ -41,7 +41,7 @@ def assemble(src_name, args):
 
 sym_renames = {}
 
-def compile(src_name, args, redefine_symbols = True, macros=[]):
+def compile(src_name, args, public_symbols, macros=[], redefine_symbols = True):
     path, fname, ext = split_fname(src_name)
     objname = os.path.join(path, fname + ".o")
     # Prepare compilation
@@ -61,12 +61,12 @@ def compile(src_name, args, redefine_symbols = True, macros=[]):
     # Relocate symbols if needed
     if redefine_symbols:
         # Generate temporary object file with renamed symbols
-        global_funcs = get_public_functions_in_object(objname)
+        global_funcs = [s for s in get_public_functions_in_object(objname) if len(public_symbols) == 0 or s in public_symbols]
         debug("Generating temporary object files with wrapped symbols '%s'" % ", ".join(global_funcs), args)
         temp_obj = os.path.join(path, fname + '.temp.o')
         os.rename(objname, temp_obj)
         sym_renames.clear()
-        sym_renames.update({n: get_wrapped_name(n) for n in global_funcs})
+        sym_renames.update({n: get_wrapped_name(n) for n in global_funcs })
         rename_symbols(temp_obj, objname, sym_renames, args)
         # Generate ASM for prologue
         debug("Generating ASM file for public function prologues", args)
@@ -390,6 +390,8 @@ parser.add_argument("--gen-c-header", dest="gen_c_header", action="store_true", 
 parser.add_argument("--header-path", dest="header_path", default=".", help="Path for the generated header (default: current dir)")
 parser.add_argument("--name", dest="name", default=None, help="Module name (default is inferred from the namae of first source)")
 parser.add_argument("--build_flags", dest="build_flags", default=None)
+parser.add_argument("--public-symbols", dest="public_symbols", default=None)
+
 args, rest = parser.parse_known_args()
 if len(rest) == 0:
     error("Empty file/macro list")
@@ -409,9 +411,13 @@ if args.name is None:
 if args.build_flags is not None:
     compile_cmd = args.build_flags + " " + compile_cmd
 
+public_symbols = {}
+if args.public_symbols is not None:
+    public_symbols = set(args.public_symbols.split(","))
+
 output, objects = change_ext(sources[0], '.elf'), []
 for s in sources:
-    objects.extend(compile(s, args, macros=macros))
+    objects.extend(compile(s, args, public_symbols, macros=macros))
 if args.stop_after_compile:
     sys.exit(0)
 link(objects, output, args)

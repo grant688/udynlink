@@ -11,3 +11,4 @@
 tests/qemu_host/src/test_qemu.c
 *.pyc
 temp/*
+*.txt

@@ -124,13 +124,6 @@ static void mark_module_free(udynlink_module_t *p_mod) {
     memset(p_mod, 0, sizeof(udynlink_module_t));
 }
 
-// Write a value to the given error pointer only if the pointer isn't NULL
-static void write_error(udynlink_error_t *p, udynlink_error_t val) {
-    if (p != NULL) {
-        *p = val;
-    }
-}
-
 // Return the entry with the specified index in the given symbol table
 // Returns "p_sym" if OK, NULL if index is out of range or an error occured
 static udynlink_sym_t *get_sym_at(const udynlink_module_t *p_mod, uint32_t index, udynlink_sym_t *p_sym) {
@@ -180,12 +173,14 @@ static udynlink_sym_t *offset_sym(const udynlink_module_t *p_mod, udynlink_sym_t
 ////////////////////////////////////////////////////////////////////////////////
 // Public interface
 
-udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, uint32_t load_size, udynlink_load_mode_t load_mode, udynlink_error_t *p_error) {
-    udynlink_module_t *p_mod = udynlink_external_malloc(sizeof(udynlink_module_t));
+udynlink_error_t udynlink_load_module(udynlink_module_t *p_mod, const void *base_addr, void *load_addr, uint32_t load_size, udynlink_load_mode_t load_mode) {
     void *ram_addr = NULL;
     udynlink_error_t res = UDYNLINK_OK;
     const udynlink_module_header_t *p_header = (const udynlink_module_header_t*)base_addr;
     udynlink_sym_t sym;
+
+    if(!p_mod)
+        return UDYNLINK_ERR_INVALID_MODULE;
 
     // Setup the module structure. Depending on the copy mode, we might need to rewrite it later.
     p_mod->p_header = p_header;
@@ -304,7 +299,6 @@ udynlink_module_t *udynlink_load_module(const void *base_addr, void *load_addr, 
     UDYNLINK_DEBUG(UDYNLINK_DEBUG_INFO, "Done loading module at %p\n", base_addr);
 
 exit:
-    write_error(p_error, res);
     if (res != UDYNLINK_OK) { // there's an error, so cleanup allocated structures and memory
         UDYNLINK_DEBUG(UDYNLINK_DEBUG_ERROR, error_codes[(int)res]);
         if ((p_mod->p_ram != NULL) && !UDYNLINK_LOAD_IS_FOREIGN_RAM(p_mod)) { // free allocated memory
@@ -315,7 +309,7 @@ exit:
             mark_module_free(p_mod);
         }
     }
-    return res == UDYNLINK_OK ? p_mod : NULL;
+    return res;
 }
 
 udynlink_error_t udynlink_unload_module(udynlink_module_t *p_mod) {
@@ -329,8 +323,11 @@ udynlink_error_t udynlink_unload_module(udynlink_module_t *p_mod) {
         UDYNLINK_DEBUG(UDYNLINK_DEBUG_INFO, "Deallocated memory area at %p\n", p_mod->p_ram);
     }
     mark_module_free(p_mod);
-    udynlink_external_free(p_mod);
     return UDYNLINK_OK;
+}
+
+const char *udynlink_error_msg(udynlink_error_t* err) {
+    return error_codes[(int)err];
 }
 
 uint32_t udynlink_get_ram_size(const udynlink_module_t *p_mod) {

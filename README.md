@@ -2,6 +2,12 @@
 
 # Changes
 ```
+[5] 2023-11-06 eh2k:
+    * refactoring udynlink_load_module + tests
+    * udynlink_error_msg added
+    * mkmodule --public-symbols arg (do not wrapp all global functions)
+    * platformio library.json
+    * import in platformio.ini eg: lib_deps = https://github.com/????/udynlink.git
 [4] 2023-11-02 eh2k:
     * O3 opt 
     * (string table issue) R_ARM_ABS32 data relocation
