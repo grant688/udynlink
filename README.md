@@ -2,6 +2,9 @@
 
 # Changes
 ```
+[6] 2023-11-08 eh2k:
+    * mkmodule --bin-name arg (--name can be used separately)
+    * udynlink_get_module_name2 (get module name from base_addr)
 [5] 2023-11-06 eh2k:
     * refactoring udynlink_load_module + tests
     * udynlink_error_msg added

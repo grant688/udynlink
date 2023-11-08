@@ -345,7 +345,7 @@ def process(output, args):
         img += ('\0' * (4 - len(img) % 4)).encode('utf-8')
     # And finally append the code
     img = img + code_sect + data_sect
-    bin_name = args.name + ".bin"
+    bin_name = args.bin_name
     with open(bin_name, "wb") as f:
         f.write(img)
     print("Image written to '%s'." % bin_name)
@@ -391,6 +391,7 @@ parser.add_argument("--header-path", dest="header_path", default=".", help="Path
 parser.add_argument("--name", dest="name", default=None, help="Module name (default is inferred from the namae of first source)")
 parser.add_argument("--build_flags", dest="build_flags", default=None)
 parser.add_argument("--public-symbols", dest="public_symbols", default=None)
+parser.add_argument("--bin-name", dest="bin_name", default=None)
 
 args, rest = parser.parse_known_args()
 if len(rest) == 0:
@@ -407,6 +408,10 @@ sources = rest
 if args.name is None:
     _, name, _ = split_fname(sources[0])
     args.name = name
+
+if args.bin_name is None:
+    path, _ = os.path.splitext(sources[0])
+    args.bin_name = path + ".bin"
 
 if args.build_flags is not None:
     compile_cmd = args.build_flags + " " + compile_cmd

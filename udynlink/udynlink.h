@@ -145,6 +145,9 @@ uint32_t udynlink_get_ram_size(const udynlink_module_t *p_mod);
 // Returns the name of the given module.
 const char *udynlink_get_module_name(const udynlink_module_t *p_mod);
 
+// Returns the name of the given module.
+const char *udynlink_get_module_name2(const void *base_addr);
+
 // Lookup the given symbol. Writes the result in p_sym.
 // p_module - pointer to the module to search, or NULL to search in all modules.
 // name - name of the symbol

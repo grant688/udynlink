@@ -103,9 +103,7 @@ static uint8_t *get_data_pointer(const udynlink_module_t *p_mod) {
 }
 
 // Gets the pointer to the symbol table according to the given module header
-static const uint32_t *get_sym_table_pointer(const udynlink_module_t *p_mod) {
-    const udynlink_module_header_t *p_header = p_mod->p_header;
-
+static const uint32_t *get_sym_table_pointer(const udynlink_module_header_t *p_header) {
     return (uint32_t*)p_header + sizeof(udynlink_module_header_t) / sizeof(uint32_t) + p_header->num_rels * 2;
 }
 
@@ -126,9 +124,9 @@ static void mark_module_free(udynlink_module_t *p_mod) {
 
 // Return the entry with the specified index in the given symbol table
 // Returns "p_sym" if OK, NULL if index is out of range or an error occured
-static udynlink_sym_t *get_sym_at(const udynlink_module_t *p_mod, uint32_t index, udynlink_sym_t *p_sym) {
+static udynlink_sym_t *get_sym_at(const udynlink_module_header_t *p_header, uint32_t index, udynlink_sym_t *p_sym) {
     uint32_t name_off, info;
-    const uint32_t *p_symt = get_sym_table_pointer(p_mod);
+    const uint32_t *p_symt = get_sym_table_pointer(p_header);
 
     if (index >= *p_symt) { // first word in the symbol table is the number of entries
         return NULL;
@@ -262,7 +260,7 @@ udynlink_error_t udynlink_load_module(udynlink_module_t *p_mod, const void *base
             continue;
         }
 
-        if (get_sym_at(p_mod, symt_offset, &sym) == NULL) { // symbol table offset is out of range, shouldn't happen
+        if (get_sym_at(p_mod->p_header, symt_offset, &sym) == NULL) { // symbol table offset is out of range, shouldn't happen
             res = UDYNLINK_ERR_LOAD_BAD_RELOCATION_TABLE;
             goto exit;
         }
@@ -350,7 +348,20 @@ uint32_t udynlink_get_ram_size(const udynlink_module_t *p_mod) {
 
 const char *udynlink_get_module_name(const udynlink_module_t *p_mod) {
     udynlink_sym_t sym;
-    udynlink_sym_t *p_sym = get_sym_at(p_mod, UDYNLINK_SYM_NAME_OFFSET, &sym);
+    udynlink_sym_t *p_sym = get_sym_at(p_mod->p_header, UDYNLINK_SYM_NAME_OFFSET, &sym);
+
+    if (p_sym == NULL) {
+        return NULL;
+    } else {
+        return p_sym->name;
+    }
+}
+
+const char *udynlink_get_module_name2(const void *base_addr) {
+
+    const udynlink_module_header_t *p_header = (const udynlink_module_header_t*)base_addr;
+    udynlink_sym_t sym;
+    udynlink_sym_t *p_sym = get_sym_at(p_header, UDYNLINK_SYM_NAME_OFFSET, &sym);
 
     if (p_sym == NULL) {
         return NULL;
@@ -364,7 +375,7 @@ udynlink_sym_t *udynlink_lookup_symbol(const udynlink_module_t *p_mod, const cha
 
     if (p_mod != NULL) { // but consider only the given one if not NULL
         idx = 0;
-        while (get_sym_at(p_mod, idx ++, p_sym) != NULL) { // iterate through module's symbol table
+        while (get_sym_at(p_mod->p_header, idx ++, p_sym) != NULL) { // iterate through module's symbol table
             if (!strcmp(p_sym->name, name)) { // symbol found
                 return offset_sym(p_mod, p_sym); // offset value properly before returning
             }
