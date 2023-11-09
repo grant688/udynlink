@@ -2,6 +2,8 @@
 
 # Changes
 ```
+[7] 2023-11-08 eh2k:
+    * mkmodule --public-symbols, write only public symbols to bin
 [6] 2023-11-08 eh2k:
     * mkmodule --bin-name arg (--name can be used separately)
     * udynlink_get_module_name2 (get module name from base_addr)
