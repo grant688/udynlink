@@ -2,6 +2,8 @@
 
 # Changes
 ```
+[8] 2023-11-10 eh2k:
+    * udynlink_cpp_init - support C++ global constructors, __init_array etc.
 [7] 2023-11-08 eh2k:
     * mkmodule --public-symbols, write only public symbols to bin
 [6] 2023-11-08 eh2k:

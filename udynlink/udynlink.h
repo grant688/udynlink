@@ -135,6 +135,9 @@ udynlink_error_t udynlink_load_module(udynlink_module_t *p_mod, const void *base
 // Unloads the specified module. Returns the status of the unload operation.
 udynlink_error_t udynlink_unload_module(udynlink_module_t *p_mod);
 
+// Calls c++ global constructors (__init_array)
+void udynlink_cpp_init(udynlink_module_t *p_mod);
+
 // Return error string from error enum.
 const char *udynlink_error_msg(udynlink_error_t* err);
 

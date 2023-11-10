@@ -26,6 +26,14 @@ SECTIONS
     *(.rodata)               /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
+		KEEP(*(.init))
+		__preinit_array_start = .;
+		KEEP (*(.preinit_array))
+		__preinit_array_end = .;
+		__init_array_start = .;
+		KEEP (*(.init_array))
+		__init_array_end = .;
+		. = ALIGN(4);
   } > all
 
   .bss :

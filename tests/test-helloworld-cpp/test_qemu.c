@@ -27,6 +27,9 @@ int test_qemu(void) {
     for (int i = (int)_UDYNLINK_LOAD_MODE_FIRST; i <= (int)_UDYNLINK_LOAD_MODE_LAST; i ++) {
         if (udynlink_load_module(&mod, mod_hello_cpp_module_data, NULL, 0, (udynlink_load_mode_t)i))
             return 0;
+
+        udynlink_cpp_init(&mod);
+        
         CHECK_RAM_SIZE(&mod, 0);
         if (!check_exported_symbols(&mod, exported_syms))
             goto exit;
