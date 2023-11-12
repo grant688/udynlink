@@ -13,7 +13,7 @@ linker_script = os.path.join(os.path.dirname(__file__), "code_before_data.ld")
 ################################################################################
 # Compilation
 ################################################################################
-compile_cmd = "-fPIE -msingle-pic-base -mcpu=cortex-m4 -mthumb -fomit-frame-pointer -fno-inline {extra} {input} -c -o {output}"
+compile_cmd = "-fPIE -msingle-pic-base -mcpu=cortex-m4 -mthumb -fomit-frame-pointer {extra} {input} -c -o {output}"
 asm_cmd = "-x assembler-with-cpp -mcpu=cortex-m4 -mthumb {input} -c -o {output}"
 link_cmd = "-mcpu=cortex-m4 -mthumb -T {ld} -nostartfiles -nodefaultlibs -nostdlib -Wl,--unresolved-symbols=ignore-in-object-files -Wl,--emit-relocs {input} -Wl,-e,0 -o {output}"
 
@@ -50,13 +50,14 @@ def compile(src_name, args, public_symbols, macros=[]):
     if not args.no_long_calls:
         extra += " -mlong-calls"
     extra += " -O3" if args.no_opt else " -Os"
-    if src_name.endswith(".cpp") or src_name.endswith(".cxx"):
-        extra += " -fno-use-cxa-atexit"
-        extra += " -fno-exceptions"
     if macros:
         extra = extra + " " + " ".join(macros)
     compile_data = {"input": src_name, "extra": extra, "output": main_obj}
     # Execute compile command
+    if src_name.endswith(".cpp") or src_name.endswith(".cxx"):
+        compile_data["extra"] += " -fno-use-cxa-atexit"
+        compile_data["extra"] += " -fno-exceptions"
+        compile_data["extra"] += " -fno-rtti"
     debug("Compiling '%s'" % src_name, args)
     execute("arm-none-eabi-gcc " + compile_cmd.format(**compile_data), args)
     object_files += [main_obj]

@@ -2,6 +2,8 @@
 
 # Changes
 ```
+[8] 2023-11-12 eh2k:
+    * removed hardcoded compile flag '-fno-inline', added '-fno-rtti' for cpp files
 [8] 2023-11-10 eh2k:
     * udynlink_cpp_init - support C++ global constructors, __init_array etc.
 [7] 2023-11-08 eh2k:
