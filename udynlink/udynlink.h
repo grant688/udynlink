@@ -24,6 +24,10 @@
 extern "C" {
 #endif
 
+#ifndef UDYNLINK_LOT_BASE
+#define UDYNLINK_LOT_BASE                     0x20000000
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Data structures and macros
 

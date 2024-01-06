@@ -90,7 +90,7 @@ def compile(src_name, args, public_symbols, macros=[]):
         loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)))
         env = Environment(loader = loader)
         tmpl = env.get_template("asm_template.tmpl")
-        data = tmpl.render({"sym_names": sym_renames})
+        data = tmpl.render({"sym_names": sym_renames, "lot_base": args.lot_base})
         p_fname = os.path.join(objname + "_prologue.s")
         with open(p_fname, "wt") as f:
             f.write(str(data))
@@ -430,6 +430,7 @@ parser.add_argument("--name", dest="name", default=None, help="Module name (defa
 parser.add_argument("--build_flags", dest="build_flags", default=None)
 parser.add_argument("--public-symbols", dest="public_symbols", default=None)
 parser.add_argument("--bin-name", dest="bin_name", default=None)
+parser.add_argument("--mod-base", dest="lot_base", default="0x20000000", help="LOT base address (default: 0x20000000)")
 
 args, rest = parser.parse_known_args()
 if len(rest) == 0:
