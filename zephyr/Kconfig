@@ -1,0 +1,7 @@
+# Copyright (c) 2024 GP Orcullo
+# SPDX-License-Identifier: Apache-2.0
+
+config UDYNLINK
+	bool "Enable udynlink"
+	help
+	  This option enables udynlink as a Zephyr module.
