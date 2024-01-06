@@ -314,8 +314,15 @@ void udynlink_cpp_init(udynlink_module_t *p_mod){
     udynlink_sym_t __init_array= {};
     if(udynlink_lookup_symbol(p_mod, "__init_array", &__init_array) != NULL)
     {
+#ifdef UDYNLINK_SKIP_PROLOGUE
+        /* load LOT address to R9 */
+        register void * mod_base __asm__("r9") = p_mod->p_ram;
+        __asm__ volatile("\n\t" ::"r"(mod_base));
+#else
         uint32_t* mod_base = (uint32_t*) UDYNLINK_LOT_BASE;
         *mod_base = p_mod->ram_base;
+#endif /* UDYNLINK_SKIP_PROLOGUE */
+
         typedef void (*void_func)(void);
         void_func f = (void_func)__init_array.val;
         f();

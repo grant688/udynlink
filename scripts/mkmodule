@@ -73,31 +73,32 @@ def compile(src_name, args, public_symbols, macros=[]):
         debug("Compiling '%s'" % src_name, args)
         execute("arm-none-eabi-gcc " + compile_cmd.format(**compile_data), args)
         object_files += [libc_obj]
-    
-    # Relocate symbols if needed
-    for objname in [] + object_files:
-        # Generate temporary object file with renamed symbols
-        global_funcs = [s for s in get_public_functions_in_object(objname) if len(public_symbols) == 0 or s in public_symbols or s == "__init_array"]
-        debug("Generating temporary object files with wrapped symbols '%s'" % ", ".join(global_funcs), args)
-        temp_obj = os.path.join(objname + '.temp.o')
-        os.rename(objname, temp_obj)
-        sym_renames.clear()
-        sym_renames.update({n: get_wrapped_name(n) for n in global_funcs })
-        print("sym_renames", to_json(sym_renames))
-        rename_symbols(temp_obj, objname, sym_renames, args)
-        # Generate ASM for prologue
-        debug("Generating ASM file for public function prologues", args)
-        loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)))
-        env = Environment(loader = loader)
-        tmpl = env.get_template("asm_template.tmpl")
-        data = tmpl.render({"sym_names": sym_renames, "lot_base": args.lot_base})
-        p_fname = os.path.join(objname + "_prologue.s")
-        with open(p_fname, "wt") as f:
-            f.write(str(data))
-        # Assemble prologue data
-        second_obj = assemble(p_fname, args)
-        os.remove(p_fname)
-        object_files += [second_obj]
+
+    if not args.no_prologue:
+        # Relocate symbols if needed
+        for objname in [] + object_files:
+            # Generate temporary object file with renamed symbols
+            global_funcs = [s for s in get_public_functions_in_object(objname) if len(public_symbols) == 0 or s in public_symbols or s == "__init_array"]
+            debug("Generating temporary object files with wrapped symbols '%s'" % ", ".join(global_funcs), args)
+            temp_obj = os.path.join(objname + '.temp.o')
+            os.rename(objname, temp_obj)
+            sym_renames.clear()
+            sym_renames.update({n: get_wrapped_name(n) for n in global_funcs })
+            print("sym_renames", to_json(sym_renames))
+            rename_symbols(temp_obj, objname, sym_renames, args)
+            # Generate ASM for prologue
+            debug("Generating ASM file for public function prologues", args)
+            loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)))
+            env = Environment(loader = loader)
+            tmpl = env.get_template("asm_template.tmpl")
+            data = tmpl.render({"sym_names": sym_renames, "lot_base": args.lot_base})
+            p_fname = os.path.join(objname + "_prologue.s")
+            with open(p_fname, "wt") as f:
+                f.write(str(data))
+            # Assemble prologue data
+            second_obj = assemble(p_fname, args)
+            os.remove(p_fname)
+            object_files += [second_obj]
 
     if len(public_symbols) != 0:
         public_symbols.add("__init_array")
@@ -431,6 +432,7 @@ parser.add_argument("--build_flags", dest="build_flags", default=None)
 parser.add_argument("--public-symbols", dest="public_symbols", default=None)
 parser.add_argument("--bin-name", dest="bin_name", default=None)
 parser.add_argument("--mod-base", dest="lot_base", default="0x20000000", help="LOT base address (default: 0x20000000)")
+parser.add_argument("--no-prologue", dest="no_prologue", action="store_true", help="Skip wrapper for exported functions (default: false)")
 
 args, rest = parser.parse_known_args()
 if len(rest) == 0:
