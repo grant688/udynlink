@@ -461,16 +461,21 @@ public_symbols = {}
 if args.public_symbols is not None:
     public_symbols = set(args.public_symbols.split(","))
 
-output, objects = change_ext(sources[0], '.elf'), []
-for s in sources:
-    objects.extend(compile(s, args, public_symbols, macros=macros))
-if args.stop_after_compile:
-    sys.exit(0)
-link(objects, output, args)
-if args.stop_after_link:
-    disasm(output, args)
-    sys.exit(0)
+if len(sources) == 1 and sources[0].endswith(".elf"):
+    output = sources[0]
+else:
+    output, objects = change_ext(sources[0], '.elf'), []
+    for s in sources:
+        objects.extend(compile(s, args, public_symbols, macros=macros))
+    if args.stop_after_compile:
+        sys.exit(0)
+    link(objects, output, args)
+    if args.stop_after_link:
+        disasm(output, args)
+        sys.exit(0)
+
 bin_name = process(output, args)
+
 if args.gen_c_header:
     gen_c_header(bin_name, args.header_path, args)
 disasm(output, args)
