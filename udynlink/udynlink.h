@@ -34,8 +34,7 @@ extern "C" {
 // Module header structure
 typedef struct {
     uint32_t sign;                              // module signature
-    //uint16_t mod_version;                       // module version (major, minor)
-    //uint16_t udynlink_version;                  // version of udynlink used to compile module (major, minor)
+    uint32_t crc;                               // module crc32
     uint16_t num_lot;                           // number of LOT entries
     uint16_t num_rels;                          // number of relocations
     uint32_t symt_size;                         // size of symbol table in bytes

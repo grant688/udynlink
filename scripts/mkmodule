@@ -3,6 +3,7 @@
 from udynlink_utils import *
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
+from zlib import crc32
 import struct
 
 sectname_code = '.text'
@@ -256,6 +257,7 @@ def process(output, args):
     # | Field name   | Field size   | Meaning                               |
     # +--------------+--------------+---------------------------------------+
     # | sign         | 4            | Signature for module (always 'UDLM')  |
+    # | crc32        | 4            | CRC32 of next entry up to end of img  |
     # | totlot       | 2            | Number of LOT entries                 |
     # | totrels      | 2            | Total number of relocations           |
     # | symtsize     | 4            | Size of symbol table, bytes (align 4) |
@@ -273,10 +275,9 @@ def process(output, args):
 
     set_debug_col('magenta')
     debug("%s Building image %s" % ('-' * 10, '-' * 10), args)
-    img = bytearray("UDLM".encode('ascii'))  # Signature (4b)
     # The first entry in the symbol table is always the module name
     slist_all = [s for s in sym_map if (s in reloc_name_to_idx) or sym_map[s] == "external" or sym_map[s] == "exported"]
-    img += struct.pack("<H", lot_entries) # LOT size (4b)
+    img = struct.pack("<H", lot_entries) # LOT size (4b)
 
     # Compute len of symbol table in advance (also name to symbol table index mapping (symt_mapping))
     slist = [args.name]
@@ -337,7 +338,7 @@ def process(output, args):
     img += struct.pack("<I", len(bss_sect))  # Size of bss section (4b)
     # Write relocations: (lot off, symy off) pairs
     img += realocs
-    
+
     debug("== SymbolTable, entries: (%d), bytes %d" % (len(slist), symt_len), args)
     # Write actual symbol table
     off = len(slist) * 8 + 4
@@ -386,6 +387,12 @@ def process(output, args):
     img = img + code_sect + data_sect
     bin_name = args.bin_name
     with open(bin_name, "wb") as f:
+        # Signature
+        f.write(bytearray("UDLM".encode('ascii')))
+        # crc32
+        crc = crc32(img)
+        debug("Image size: 0x%0X, crc32: 0x%08X" %(len(img), crc), args)
+        f.write(crc.to_bytes(4, byteorder='little'))
         f.write(img)
     print("Image written to '%s'." % bin_name)
     set_debug_col()
