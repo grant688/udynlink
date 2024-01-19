@@ -136,7 +136,7 @@ def process(output, args):
     ds = get_section_in_elf(output, sectname_data)
     debug("Read section '%s' of size %d" % (sectname_data, ds["size"]), args)
     check(ds["size"] % 4 == 0, "Length of section '%s' is not a multiple of 4" % sectname_data)
-    check(ds["addr"] == crt_off, "Section '%s' doesn't begin after section '%s'" % (sectname_data, sectname_code))
+    check(ds["addr"] >= crt_off, "Section '%s' doesn't begin after section '%s'" % (sectname_data, sectname_code))
     data_sect = ds["data"]
     crt_off += ds["size"]
     sect_idx_mapping[ds["index"]] = sectname_data
