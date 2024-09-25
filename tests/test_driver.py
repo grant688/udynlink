@@ -6,8 +6,10 @@ import sys
 import shutil
 import re
 
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
 default_qemu_timeout = 5
-compile_cmd = '../../scripts/mkmodule --gen-c-header --header-path ../qemu_host/src %s%s'
+compile_cmd = '../../scripts/mkmodule --disasm --gen-c-header --header-path ../qemu_host/src %s%s'
 cleaned = False
 
 # Simple decorator that keeps the curent directory unchanged after running
@@ -45,7 +47,16 @@ def test_one(full_path, opt):
     sys.path.append(full_path)
     if "test_data" in sys.modules:
         del sys.modules["test_data"]
-    from test_data import test_data
+    test_data = {}
+    if os.path.isfile(os.path.join(full_path, "test_data.py")):
+        from test_data import test_data
+    else:
+        test_data = {
+            "desc": "",
+            "modules": [[a for a in os.listdir(full_path) if a.endswith(".cpp")]],
+            "required": []
+        }
+    
     sys.path.remove(full_path)
     aopt = "Os" if opt else "O3"
     print("--- Running test '%s' in '%s' with opt %s ---" % (test_data["desc"], os.path.basename(full_path), "-Os" if opt else "-O0"))
@@ -100,7 +111,7 @@ total, failed = 0, 0
 tests = sys.argv[1:] if len(sys.argv) > 1 else os.listdir(".")
 for l in tests:
     # Look through all dirs that begin with "test-" and have a test_data.py file
-    if l.startswith("test-") and os.path.isdir(l) and os.path.isfile(os.path.join(l, "test_data.py")):
+    if l.startswith("test-") and os.path.isdir(l):
         for opt in [False, True]:
             res, out = test_one(os.path.abspath(l), opt)
             total += 1

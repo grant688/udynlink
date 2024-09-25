@@ -231,7 +231,7 @@ def process(output, args):
             check(offset >= 0, "Offset of R_ARM_ABS32 symbols '%s' should be positive or 0!" % s)
             data_relocs.append((s, delta_off + offset, value))
             debug("Found data relocation for symbol '%s' (offset is %X, value is %x)" % (s, delta_off + offset, value), args)
-            if not s in reloc_name_to_idx:
+            if s != ".data" and not s in reloc_name_to_idx:
                 reloc_name_to_idx[s] = delta_off + offset
     print_list([l["name"] for l in rlist], "Final LOT relocation list:", args)
     print_list([l[0] for l in data_relocs], "Final data relocation list:", args)
@@ -310,15 +310,16 @@ def process(output, args):
             data_offset = (offset - delta_off) * 4
             value = (1 << 31) | value #flag -> not a symt index
         else:
-            offset = reloc_name_to_idx[sym]
+            if not r in data_relocs: #if sym in reloc_name_to_idx:
+                offset = reloc_name_to_idx[sym]
             value = get_sym_index(slist, sym)
-            if relocated.get(sym, False):
+            if relocated.get(f"{sym}{offset}{value}", False):
                 continue
 
-        debug("%02d: Relocation (%s) type: %s { lot: 0x%08X, symt: 0x%08X }  written." % (
-            total_relocs, sym, 
+        debug("Relocation (%s) type: %s { lot: 0x%08X, symt: 0x%08X }  written." % (
+            sym, 
             "foreign" if r in foreign_relocs else "local", offset, value), args)
-        relocated[sym] = True
+        relocated[f"{sym}{offset}{value}"] = True
         realocs += struct.pack("<II", offset, value)
         total_relocs += 1
     debug("== RelocationTable, entries: %d" % total_relocs, args)
