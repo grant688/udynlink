@@ -6,7 +6,7 @@
 #include <string.h>
 
 int test_qemu(void) {
-    const char *exported_syms[] = {"test", "g2", "f2", "pcc_f1", "p2_arg", NULL};
+    const char *exported_syms[] = {"test", "g2", "f2", "p2_arg", NULL};
     const char *extern_syms[] = {"printf", NULL};
     udynlink_module_t mod;
     int res = 0;

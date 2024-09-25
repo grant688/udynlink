@@ -13,7 +13,7 @@ int test_qemu(void) {
             return 0;
         CHECK_RAM_SIZE(&mod, 0);
         // This module should also have a total RAM size of 0 in XIP mode
-        if(((udynlink_load_mode_t)i == UDYNLINK_LOAD_MODE_XIP) && (udynlink_get_ram_size(&mod) != 0))
+        if(((udynlink_load_mode_t)i == UDYNLINK_LOAD_MODE_XIP) && (udynlink_get_ram_size(&mod) > 4))
             goto exit;
         if (!check_exported_symbols(&mod, exported_syms))
             goto exit;

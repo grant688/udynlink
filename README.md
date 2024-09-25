@@ -2,6 +2,10 @@
 
 # Changes
 ```
+[12] 2024-12-01 eh2k:
+    * --gc-sections + optimization "readonly data & relocs"
+[11] 2024-09-25 eh2k:
+    * public funcs udynlink_get_module_size, udynlink_get_code_pointer
 [10] 2024-09-25 eh2k:
     * multiple relocations to same symbol in an array - only first was relocated
 [9] 2023-11-12 eh2k:

@@ -17,6 +17,9 @@ compile_cmd = "-fPIE -msingle-pic-base -mcpu=cortex-m4 -mthumb -fomit-frame-poin
 asm_cmd = "-x assembler-with-cpp -mcpu=cortex-m4 -mthumb {input} -c -o {output}"
 link_cmd = "-mcpu=cortex-m4 -mthumb -T {ld} -nostartfiles -nodefaultlibs -nostdlib -Wl,--unresolved-symbols=ignore-in-object-files -Wl,--emit-relocs {input} -Wl,-e,0 -o {output}"
 
+compile_cmd = "-ffunction-sections -fdata-sections " + compile_cmd
+link_cmd = "-Wl,--gc-sections " + link_cmd
+
 def rename_symbols(src, dest, name_map, args):
     cmdline = "arm-none-eabi-objcopy"
     for n in name_map:
@@ -303,7 +306,7 @@ def process(output, args):
     for r in  local_relocs + foreign_relocs + data_relocs:
         sym, offset, value = r
         if sym == ".text": 
-            continue
+            value = (1 << 30) | value #flag -> not a symt index
         elif sym == ".data": 
             # R_ARM_ABS32 data relocation
             # *offset += &data - value

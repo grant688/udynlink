@@ -260,6 +260,12 @@ udynlink_error_t udynlink_load_module(udynlink_module_t *p_mod, const void *base
             continue;
         }
 
+        if(symt_offset & (1 << 30)) {
+            uint32_t *p = p_data + (lot_offset - p_header->num_lot);
+            *p = ((uint32_t)get_code_pointer(p_mod) + (uint32_t)*p);
+            continue;
+        }
+
         if (get_sym_at(p_mod->p_header, symt_offset, &sym) == NULL) { // symbol table offset is out of range, shouldn't happen
             res = UDYNLINK_ERR_LOAD_BAD_RELOCATION_TABLE;
             goto exit;
@@ -409,4 +415,22 @@ void udynlink_set_debug_level(udynlink_debug_level_t level) {
     debug_level = level;
 }
 
+uint32_t udynlink_get_module_size(const void *base_addr)
+{
+    if (memcmp(base_addr, "UDLM", 4))
+        return 0;
+
+    const udynlink_module_header_t *p_header = (const udynlink_module_header_t *)base_addr;
+
+    uint32_t tot_size = 0;
+    tot_size += sizeof(udynlink_module_header_t) + p_header->num_rels * 2 * sizeof(uint32_t) + p_header->symt_size;
+    tot_size += p_header->code_size;
+    tot_size += p_header->data_size;
+
+    return tot_size;
+}
+
+uint8_t *udynlink_get_code_pointer(const udynlink_module_t *p_mod) {
+    return get_code_pointer(p_mod);
+}
 
