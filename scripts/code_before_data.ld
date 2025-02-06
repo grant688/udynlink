@@ -13,8 +13,11 @@ SECTIONS
   .text :
   {
     . = ALIGN(4);
+    KEEP(*(.text_nogc))
     *(.text)                 /* .text sections (code) */
     *(.text*)                /* .text* sections (code) */
+    *(.rodata)               /* .rodata sections (constants, strings, etc.) */
+    *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } > all
 
@@ -23,9 +26,7 @@ SECTIONS
     . = ALIGN(4);
     *(.data)                 /* .data sections */
     *(.data*)                /* .data* sections */
-    *(.rodata)               /* .rodata sections (constants, strings, etc.) */
-    *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
-    . = ALIGN(4);
+. = ALIGN(4);
 		KEEP(*(.init))
 		__preinit_array_start = .;
 		KEEP (*(.preinit_array))
